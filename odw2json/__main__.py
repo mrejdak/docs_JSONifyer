@@ -2,6 +2,7 @@
 
   run       — przetwórz katalog input/ → output/ (domyślnie: ./input, ./output); kod wyjścia 0 po
               przetworzeniu wszystkich plików (błędy pojedynczych plików: log + trace/, wynik {} lub szkielet)
+  view      — podgląd w przeglądarce: dokument z input/ | wynik JSON z output/ (+ szczegóły z trace/)
   classify  — klasyfikacja pojedynczych PDF-ów z uzasadnieniem (diagnostyka)
   check     — walidacja configu (typy, schematy, wzorce, słowniki)
 """
@@ -28,6 +29,15 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--workers", type=int, default=None)
     p.add_argument("--force-ocr", action="store_true", help="OCR także stron z warstwą tekstową")
     p.add_argument("--no-trace", action="store_true")
+    p = sub.add_parser("view", help="podgląd: dokument z input/ obok wyniku JSON z output/ (przeglądarka)")
+    p.add_argument("path", nargs="?", default="input", help="plik w input/ albo katalog (lista dokumentów)")
+    p.add_argument("--input", default="input", help="katalog wejściowy (domyślnie ./input)")
+    p.add_argument("--output", default="output", help="katalog wyników (domyślnie ./output)")
+    p.add_argument("--host", default="127.0.0.1", help="adres nasłuchu (0.0.0.0 = dostęp z sieci)")
+    p.add_argument("--port", type=int, default=8000)
+    p.add_argument("--no-browser", action="store_true", help="nie otwieraj przeglądarki (np. na serwerze)")
+    p.add_argument("--url-host", default=None, help="host w wypisanym adresie (np. adres VM)")
+    p.add_argument("--url-port", type=int, default=None, help="port w wypisanym adresie (np. port hosta przy Dockerze)")
     p = sub.add_parser("classify", help="klasyfikacja PDF-ów z uzasadnieniem")
     p.add_argument("pdf", nargs="+")
     p.add_argument("--force-ocr", action="store_true")
@@ -50,6 +60,11 @@ def main(argv: list[str] | None = None) -> int:
             print(f"  BŁĄD:  {e}")
         print("config OK" if not errors else f"config: {len(errors)} błędów")
         return 1 if errors else 0
+
+    if a.cmd == "view":
+        from .viewer import run_viewer
+
+        return run_viewer(a.path, a.input, a.output, a.host, a.port, not a.no_browser, a.url_host, a.url_port)
 
     if a.cmd == "classify":
         from .classify import classify

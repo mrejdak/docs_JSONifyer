@@ -49,6 +49,21 @@ OCR działa lokalnie (Tesseract 5.5, model `tessdata_best` dla języka polskiego
 `docs_JSONifyer/models/tessdata`). Gdy żaden dostawca LLM nie jest osiągalny, rozwiązanie działa dalej
 w trybie awaryjnym (reguły bez LLM), z niższą jakością ekstrakcji.
 
+## Podgląd wyników (GUI, opcjonalnie)
+
+Dokument z `input/` (po lewej) obok wyniku JSON z `output/` (po prawej), w przeglądarce; lista wszystkich
+dokumentów ze statusem wyniku, przechodzenie strzałkami ←/→, szczegóły decyzji (typ, uzasadnienie
+klasyfikacji, strony z OCR). Gdy dokument nie ma wyniku w `output/`, komenda i podgląd o tym informują.
+
+```bash
+bash /opt/solution/docs_JSONifyer/deploy/view.sh /opt/solution/input/<plik>   # albo bez argumentu: lista
+```
+
+Podgląd jest dostępny tylko na serwerze (127.0.0.1:8000) — z własnego komputera przez tunel SSH:
+`ssh -L 8000:localhost:8000 <użytkownik>@<adres-VM>`, potem adres z tokenem wypisany przez komendę.
+Opcja `--public` udostępnia go na otwartym porcie 8000 VM (adres z losowym tokenem). Ctrl+C kończy.
+Lokalnie (bez Dockera): `python -m odw2json view input/<plik>` — otwiera przeglądarkę.
+
 ## Diagnostyka (opcjonalnie)
 
 ```bash

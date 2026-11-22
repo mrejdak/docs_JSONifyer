@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__TITLE__ — Odwołania2JSON</title>
+<style>
+:root {
+  --bg: #f6f7f9; --panel: #ffffff; --panel-2: #f0f2f5; --border: #dfe3e8; --text: #1c2430; --muted: #6b7684;
+  --accent: #2457c5; --accent-soft: #e6edfb; --ok: #1f8a4c; --ok-soft: #e3f4ea; --warn: #b26a00; --warn-soft: #fdf1dc;
+  --err: #c0392b; --err-soft: #fbe5e2; --neutral-soft: #eceff3;
+  --j-key: #6b3fa0; --j-str: #0f6b4f; --j-num: #b04a00; --j-bool: #2457c5; --j-null: #9aa3ae; --j-punct: #8a94a0;
+  --shadow: 0 1px 2px rgba(16, 24, 40, .06);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #12161c; --panel: #181d25; --panel-2: #1f252e; --border: #2c3440; --text: #e4e8ee; --muted: #8e99a8;
+    --accent: #7aa2f7; --accent-soft: #1f2a40; --ok: #5fcf8e; --ok-soft: #173126; --warn: #f0b35a; --warn-soft: #3a2c14;
+    --err: #f2867a; --err-soft: #3c1f1c; --neutral-soft: #242b35;
+    --j-key: #c3a6ff; --j-str: #7fd6a8; --j-num: #f5a97f; --j-bool: #7aa2f7; --j-null: #6b7584; --j-punct: #6b7584;
+    --shadow: none;
+  }
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--text); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  display: flex; flex-direction: column; overflow: hidden; }
+header { display: flex; align-items: center; gap: 12px; padding: 8px 14px; background: var(--panel);
+  border-bottom: 1px solid var(--border); box-shadow: var(--shadow); min-height: 52px; flex-wrap: wrap; }
+.brand { font-weight: 650; letter-spacing: .2px; white-space: nowrap; }
+.brand span { color: var(--accent); }
+.docname { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1 1 200px; }
+.docname small { display: block; font-weight: 400; color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; }
+.badge { padding: 3px 10px; border-radius: 999px; font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+.badge.typed { background: var(--ok-soft); color: var(--ok); }
+.badge.empty { background: var(--neutral-soft); color: var(--muted); }
+.badge.missing, .badge.invalid { background: var(--err-soft); color: var(--err); }
+.badge.other { background: var(--warn-soft); color: var(--warn); }
+.nav { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.nav .count { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 56px; text-align: center; }
+button, .btn { font: inherit; font-size: 13px; color: var(--text); background: var(--panel-2); border: 1px solid var(--border);
+  border-radius: 7px; padding: 5px 10px; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+button:hover:not(:disabled), .btn:hover { border-color: var(--accent); color: var(--accent); }
+button:disabled { opacity: .45; cursor: default; }
+button.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+main { flex: 1; display: grid; grid-template-columns: var(--side, 0px) minmax(200px, 1fr) 6px minmax(260px, 1fr); min-height: 0; }
+aside { border-right: 1px solid var(--border); background: var(--panel); display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+body:not(.with-list) aside { visibility: hidden; border: 0; }  /* zostaje w siatce (kolumna 0 px) */
+aside input { margin: 10px; padding: 6px 9px; border-radius: 7px; border: 1px solid var(--border); background: var(--panel-2); color: var(--text); font: inherit; }
+aside ul { list-style: none; margin: 0; padding: 0 6px 10px; overflow: auto; }
+aside li a { display: flex; gap: 8px; align-items: flex-start; padding: 6px 8px; border-radius: 7px; color: var(--text); text-decoration: none; }
+aside li a:hover { background: var(--panel-2); }
+aside li a.current { background: var(--accent-soft); }
+aside .dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 6px; flex: none; }
+.dot.typed { background: var(--ok); } .dot.empty { background: var(--muted); } .dot.missing, .dot.invalid { background: var(--err); } .dot.other { background: var(--warn); }
+aside .nm { font-size: 13px; word-break: break-all; } aside .lb { display: block; font-size: 11.5px; color: var(--muted); }
+.pane { min-width: 0; min-height: 0; display: flex; flex-direction: column; background: var(--panel); }
+.pane-head { padding: 7px 12px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px;
+  color: var(--muted); font-size: 12.5px; min-height: 40px; }
+.pane-head .path { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.pane-body { flex: 1; min-height: 0; overflow: auto; }
+.doc-frame { width: 100%; height: 100%; border: 0; display: block; background: var(--panel-2); }
+.pages { background: var(--panel-2); padding: 14px; display: flex; flex-direction: column; gap: 14px; min-height: 100%; }
+.pages figure { margin: 0; }
+.pages img { width: 100%; display: block; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .25); border-radius: 2px; min-height: 120px; }
+.pages figcaption { text-align: center; color: var(--muted); font-size: 12px; margin-top: 5px; }
+.divider { cursor: col-resize; background: var(--border); }
+.divider:hover, .divider.drag { background: var(--accent); }
+pre.json { margin: 0; padding: 14px 16px; font: 13px/1.55 ui-monospace, "Cascadia Code", Consolas, Menlo, monospace; white-space: pre-wrap; word-break: break-word; }
+.j-key { color: var(--j-key); } .j-str { color: var(--j-str); } .j-num { color: var(--j-num); } .j-bool { color: var(--j-bool); }
+.j-null { color: var(--j-null); font-style: italic; } .j-p { color: var(--j-punct); }
+.callout { margin: 14px 16px 0; padding: 12px 14px; border-radius: 9px; border: 1px solid var(--border); }
+.callout.err { background: var(--err-soft); border-color: transparent; color: var(--err); }
+.callout.info { background: var(--neutral-soft); border-color: transparent; }
+.callout b { display: block; margin-bottom: 3px; }
+.callout code { font-family: ui-monospace, Consolas, monospace; font-size: 12.5px; }
+details { margin: 12px 16px 18px; border: 1px solid var(--border); border-radius: 9px; background: var(--panel-2); }
+summary { cursor: pointer; padding: 9px 12px; font-weight: 600; }
+dl { margin: 0; padding: 0 14px 12px; display: grid; grid-template-columns: max-content 1fr; gap: 5px 14px; font-size: 13px; }
+dt { color: var(--muted); } dd { margin: 0; word-break: break-word; }
+.empty-state { height: 100%; display: flex; align-items: center; justify-content: center; text-align: center; color: var(--muted); padding: 24px; }
+.kbd { font-size: 11px; color: var(--muted); }
+@media (max-width: 900px) {
+  body { overflow: auto; }
+  main { display: flex; flex-direction: column; }
+  .divider { display: none; }
+  .pane { min-height: 70vh; }
+}
+</style>
+</head>
+<body>
+<script id="data" type="application/json">__DATA__</script>
+<header>
+  <div class="brand">Odwołania<span>2</span>JSON</div>
+  <button id="toggle-list" title="Lista dokumentów (L)">☰ Lista</button>
+  <div class="docname" id="docname"></div>
+  <span class="badge" id="badge"></span>
+  <div class="nav">
+    <button id="prev" title="Poprzedni (←)">←</button>
+    <span class="count" id="count"></span>
+    <button id="next" title="Następny (→)">→</button>
+  </div>
+</header>
+<main id="main">
+  <aside>
+    <input id="filter" type="search" placeholder="Szukaj w nazwach…">
+    <ul id="list"></ul>
+  </aside>
+  <section class="pane">
+    <div class="pane-head"><span class="path" id="in-path"></span><button id="native" title="Wbudowany podgląd PDF przeglądarki (zaznaczanie tekstu, wyszukiwanie)">PDF natywnie</button><a class="btn" id="open-doc" target="_blank" rel="noopener">Otwórz osobno</a></div>
+    <div class="pane-body" id="doc"></div>
+  </section>
+  <div class="divider" id="divider" title="Przeciągnij, aby zmienić podział"></div>
+  <section class="pane">
+    <div class="pane-head"><span class="path" id="out-path"></span><button id="copy">Kopiuj JSON</button></div>
+    <div class="pane-body" id="json"></div>
+  </section>
+</main>
+<script>
+(() => {
+  const D = JSON.parse(document.getElementById("data").textContent);
+  const doc = D.doc, T = encodeURIComponent(D.token);
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const link = (rel) => `/?doc=${encodeURIComponent(rel)}&t=${T}`;
+  const go = (rel) => { if (rel) location.href = link(rel); };
+
+  // ---- lista dokumentów
+  const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+                  set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+  const setList = (on) => { document.body.classList.toggle("with-list", on); $("main").style.setProperty("--side", on ? "280px" : "0px");
+                            $("toggle-list").classList.toggle("on", on); store.set("odw-list", on ? "1" : "0"); };
+  setList(store.get("odw-list") !== "0" && D.list.length > 1);
+  $("toggle-list").onclick = () => setList(!document.body.classList.contains("with-list"));
+  const renderList = (q) => {
+    q = (q || "").toLowerCase();
+    $("list").innerHTML = D.list.filter((it) => !q || it.rel.toLowerCase().includes(q)).map((it) =>
+      `<li><a href="${link(it.rel)}" class="${doc && it.rel === doc.rel ? "current" : ""}">` +
+      `<span class="dot ${it.state}"></span><span><span class="nm">${esc(it.rel)}</span><span class="lb">${esc(it.label)}</span></span></a></li>`).join("")
+      || `<li class="kbd" style="padding:8px">brak dokumentów</li>`;
+  };
+  renderList("");
+  $("filter").oninput = (e) => renderList(e.target.value);
+  const cur = document.querySelector("aside a.current"); if (cur) cur.scrollIntoView({ block: "center" });
+
+  if (!doc) {
+    $("docname").textContent = "Brak dokumentów w " + D.input_dir;
+    $("doc").innerHTML = `<div class="empty-state">Katalog wejściowy jest pusty.</div>`;
+    $("json").innerHTML = "";
+    ["prev", "next", "copy"].forEach((id) => $(id).disabled = true);
+    $("open-doc").style.display = "none"; $("native").style.display = "none";
+    return;
+  }
+
+  // ---- nagłówek
+  const st = doc.status;
+  $("docname").innerHTML = `${esc(doc.name)}<small>${esc(doc.rel)}</small>`;
+  $("badge").textContent = st.label; $("badge").className = "badge " + st.state;
+  $("count").textContent = doc.index > 0 ? `${doc.index} / ${doc.count}` : "";
+  $("prev").disabled = !doc.prev; $("next").disabled = !doc.next;
+  $("prev").onclick = () => go(doc.prev); $("next").onclick = () => go(doc.next);
+  document.addEventListener("keydown", (e) => {
+    if (e.target.tagName === "INPUT") return;
+    if (e.key === "ArrowLeft") go(doc.prev);
+    else if (e.key === "ArrowRight") go(doc.next);
+    else if (e.key === "l" || e.key === "L") $("toggle-list").click();
+  });
+
+  // ---- dokument (lewa strona)
+  const fileUrl = `/file?doc=${encodeURIComponent(doc.rel)}&t=${T}`;
+  $("in-path").textContent = "input/" + doc.rel;
+  $("open-doc").href = fileUrl;
+  const pagesHtml = () => {
+    let h = `<div class="pages">`;
+    for (let n = 1; n <= doc.pages; n++)
+      h += `<figure><img loading="lazy" src="/page?doc=${encodeURIComponent(doc.rel)}&n=${n}&t=${T}" alt="strona ${n}">` +
+           `<figcaption>strona ${n} / ${doc.pages}</figcaption></figure>`;
+    return h + `</div>`;
+  };
+  let native = doc.kind === "pdf" && store.get("odw-native") === "1";
+  const showDoc = () => {
+    $("native").classList.toggle("on", native);
+    if (!doc.exists) $("doc").innerHTML = `<div class="empty-state">Nie ma takiego pliku w katalogu wejściowym.</div>`;
+    else if (native) $("doc").innerHTML = `<iframe class="doc-frame" src="${fileUrl}#view=FitH" title="Dokument"></iframe>`;
+    else if (doc.pages > 0) $("doc").innerHTML = pagesHtml();
+    else $("doc").innerHTML = `<div class="empty-state">Podgląd tego pliku nie jest dostępny (format albo uszkodzony plik) — „Otwórz osobno”.</div>`;
+  };
+  $("native").style.display = doc.kind === "pdf" ? "" : "none";
+  $("native").onclick = () => { native = !native; store.set("odw-native", native ? "1" : "0"); showDoc(); };
+  showDoc();
+
+  // ---- JSON (prawa strona)
+  const render = (v, ind) => {
+    const pad = "  ".repeat(ind), pad1 = "  ".repeat(ind + 1), p = (s) => `<span class="j-p">${s}</span>`;
+    if (v === null) return `<span class="j-null">null</span>`;
+    if (typeof v === "string") return `<span class="j-str">${esc(JSON.stringify(v))}</span>`;
+    if (typeof v === "number") return `<span class="j-num">${v}</span>`;
+    if (typeof v === "boolean") return `<span class="j-bool">${v}</span>`;
+    if (Array.isArray(v)) {
+      if (!v.length) return p("[]");
+      return p("[") + "\n" + v.map((x) => pad1 + render(x, ind + 1)).join(p(",") + "\n") + "\n" + pad + p("]");
+    }
+    const ks = Object.keys(v);
+    if (!ks.length) return p("{}");
+    return p("{") + "\n" + ks.map((k) => `${pad1}<span class="j-key">${esc(JSON.stringify(k))}</span>${p(":")} ${render(v[k], ind + 1)}`)
+      .join(p(",") + "\n") + "\n" + pad + p("}");
+  };
+  $("out-path").textContent = "output/" + doc.output_rel;
+  let out = "";
+  if (st.state === "missing")
+    out += `<div class="callout err"><b>Brak wyniku dla tego dokumentu</b>Nie ma pliku <code>output/${esc(doc.output_rel)}</code> — ` +
+           `dokument nie był jeszcze przetworzony. Uruchom komendę z RUN.md.</div>`;
+  else if (st.state === "invalid")
+    out += `<div class="callout err"><b>Wynik nie jest poprawnym JSON-em</b>${esc(st.error || "")}</div>`;
+  else if (st.state === "empty")
+    out += `<div class="callout info"><b>Wynik {} — dokument nie jest żadnym z obsługiwanych typów</b>` +
+           `Obsługiwane: odwołanie do KIO, pełnomocnictwo, potwierdzenie przelewu.` +
+           (doc.trace && doc.trace.reason ? `<br>Uzasadnienie: ${esc(doc.trace.reason)}` : "") + `</div>`;
+  if ("json" in st) out += `<pre class="json">${render(st.json, 0)}</pre>`;
+  const t = doc.trace;
+  if (t) {
+    const row = (k, v) => v === null || v === undefined || v === "" ? "" : `<dt>${esc(k)}</dt><dd>${v}</dd>`;
+    const llm = t.llm || {};
+    const checks = Object.entries(t.text_checks || {}).map(([pg, c]) =>
+      `s. ${esc(pg)}: ${esc(c.reason)} → ${c.chosen === "ocr" ? "OCR" : "warstwa tekstowa"}`).join("<br>");
+    out += `<details><summary>Szczegóły decyzji</summary><dl>` +
+      row("Typ", esc(t.type || "— (wynik {})")) +
+      row("Ścieżka decyzji", esc(t.path || "")) +
+      row("Uzasadnienie", esc(t.reason || "")) +
+      row("Rodzaj wg LLM", esc(llm.rodzaj_dokumentu || "")) +
+      row("Pewność LLM", esc(llm.pewnosc || "")) +
+      row("Dowody", (llm.dowody || []).map((d) => "„" + esc(d) + "”").join("<br>")) +
+      row("Model", esc([llm.model, llm.provider && "(" + llm.provider + ")"].filter(Boolean).join(" "))) +
+      row("Strony", t.pages_total ? `${t.pages_total} (czytane: ${(t.pages_read || []).join(", ")})` : "") +
+      row("OCR", (t.ocr_pages || []).length ? `strony ${t.ocr_pages.join(", ")}` + (t.mean_conf ? ` (średnia pewność ${t.mean_conf})` : "") : "nie (warstwa tekstowa)") +
+      row("Warstwa vs OCR", checks) +
+      row("Czas", t.seconds != null ? `${t.seconds} s` : "") +
+      row("Błąd", t.error ? `<span style="color:var(--err)">${esc(t.error)}</span>` : "") +
+      `</dl></details>`;
+  }
+  $("json").innerHTML = out || `<div class="empty-state">Brak danych.</div>`;
+  $("copy").disabled = !("json" in st);
+  $("copy").onclick = async () => {
+    const txt = JSON.stringify(st.json, null, 2);
+    try { await navigator.clipboard.writeText(txt); } catch (e) {
+      const ta = document.createElement("textarea"); ta.value = txt; document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy"); } catch (e2) {} ta.remove();
+    }
+    $("copy").textContent = "Skopiowano"; setTimeout(() => $("copy").textContent = "Kopiuj JSON", 1200);
+  };
+
+  // ---- przeciągany podział
+  const div = $("divider"), main = $("main");
+  const split = (r) => main.style.gridTemplateColumns = `var(--side, 0px) minmax(200px, ${r}fr) 6px minmax(260px, ${1 - r}fr)`;
+  const saved = parseFloat(store.get("odw-split") || "");
+  if (saved > 0.15 && saved < 0.85) split(saved);
+  div.addEventListener("mousedown", (e) => {
+    e.preventDefault(); div.classList.add("drag");
+    const frames = document.querySelectorAll("iframe"); frames.forEach((f) => f.style.pointerEvents = "none");
+    const side = document.body.classList.contains("with-list") ? 280 : 0;
+    const move = (ev) => {
+      const w = main.clientWidth - side - 6, x = Math.min(Math.max(ev.clientX - side, 200), w - 260), r = x / w;
+      split(r);
+      store.set("odw-split", String(r));
+    };
+    const up = () => { div.classList.remove("drag"); frames.forEach((f) => f.style.pointerEvents = "");
+                       document.removeEventListener("mousemove", move); document.removeEventListener("mouseup", up); };
+    document.addEventListener("mousemove", move); document.addEventListener("mouseup", up);
+  });
+})();
+</script>
+</body>
+</html>
