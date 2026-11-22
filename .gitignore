@@ -5,6 +5,36 @@ build/
 dist/
 wheels/
 *.egg-info
+docs/*
+.cache/*
+PROGRESS.md
+reports/**/*.csv
+tools/ocr_bench/tessdata_best/*
 
 # Virtual environments
 .venv
+
+# Benchmark OCR — cache (duże pliki)
+reports/ocr/cache/
+
+# Sekrety
+.env
+
+# Benchmark OCR — duże pliki szczegółowe (odtwarzalne komendą tools.ocr_bench)
+reports/ocr/errors.csv
+reports/ocr/per_page.csv
+reports/ocr/survival_S.csv
+reports/ocr/survival_K.csv
+
+# Aplikacja — cache OCR/LLM i ślady decyzji
+.cache/
+trace/
+output/*
+!output/.gitkeep
+
+# Wejście/wyjście (na VM tworzą je organizatorzy; w repozytorium tylko puste katalogi)
+input/*
+!input/.gitkeep
+
+# Paczka testowa z danych organizatora (tools.make_selftest) — kopiowana na VM przez scp, nie do repozytorium
+selftest/

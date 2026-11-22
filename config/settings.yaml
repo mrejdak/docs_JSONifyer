@@ -1,0 +1,83 @@
+# Ustawienia globalne Odwołania2JSON.
+# Konfiguracja OCR wybrana w kroku 1 (benchmark: reports/ocr/wnioski.md) pod kątem przeżywalności
+# wartości pól wynikowych JSON-ów (nie samego CER):
+#   S (427 str.): CER 0,24%, pola dokładnie 94,55%, 4 zgubione tokeny pól (bez preprocessingu: 62)
+#   skany (266 pól): pola dokładnie 92,5% (bez preprocessingu: 90,2%), ≤ 1–2 edycje 99,6%
+
+text:
+  min_text_chars: 50          # strona z mniejszą liczbą znaków w warstwie tekstowej → OCR
+  max_pages: 6                # górny limit stron czytanych z dokumentu (typy mogą żądać mniej)
+
+ocr:
+  engine: tesseract           # bezpośrednie wywołanie binarki (bez OCRmyPDF — patrz wnioski)
+  tesseract_cmd: null         # null = zmienna TESSERACT_CMD, PATH albo C:\Program Files\Tesseract-OCR\tesseract.exe
+  tessdata_dir: models/tessdata   # model tessdata_best (pol); względem katalogu aplikacji; null = systemowy
+  lang: pol
+  dpi: 200                    # 200 lepsze niż 300 na wszystkich zestawach
+  oem: 1                      # LSTM
+  psm: 3                      # automatyczna segmentacja; psm 6 miesza kolumny na skanach
+  preprocess: [deskew, noleader]
+  deskew_max_angle: 5.0       # skany w danych: 1,5–2,6°
+  low_confidence: 85          # tokeny poniżej: 31–73% błędnych (≥ 95: 0,13%) → flaga niepewności
+  workers: null               # procesy OCR; null = liczba rdzeni - 1
+  cache_dir: .cache/ocr       # cache wyników OCR (klucz: plik + strona + ustawienia)
+
+layout:
+  # columns = świadoma kolumn (domyślna): bloki „etykieta | wartość” wierszami z separatorem ' | ',
+  #           bloki równorzędnych kolumn (MOCODAWCA | PEŁNOMOCNIK, Dane nadawcy | Dane odbiorcy) kolumnami;
+  # rows = wiersze wizualne (wszystko na tej samej wysokości w jednej linii — miesza kolumny!);
+  # grid = układ jak na stronie (spacje); native = kolejność Tesseracta.
+  # Współrzędne słów zawsze dostępne w PageText.page (warstwa tekstowa i OCR).
+  linearization: columns
+
+classification:
+  pages: 2                    # domyślna liczba stron czytanych do klasyfikacji (typ może nadpisać scope sygnałów)
+  # llm_verify = decyduje LLM (opisy typów z configu + „inny”), regex = wstępna ocena, ochrona przed
+  #              halucynacją (dowody leksykalne) i tryb awaryjny, gdy LLM niedostępny;
+  # regex_only = same reguły (bez LLM).
+  mode: llm_verify
+  llm:
+    call: always              # always | uncertain (oszczędnie: LLM tylko, gdy regex nie jest pewny)
+    prompt: klasyfikacja.md   # config/prompts/
+    head_chars: 5000          # początek dokumentu (pierwsze `pages` stron)
+    tail_chars: 800           # + koniec ostatniej strony, gdy dokument dłuższy (podpisy, załączniki)
+    min_level: srednia        # stopień pewności LLM (niska | srednia | wysoka); poniżej → decyzja regexu
+    no_evidence_level: wysoka # typ bez dowodów regex przyjmowany tylko przy tym stopniu…
+    grounding_min: 0.5        # …i gdy ≥ tylu cytatów-dowodów LLM występuje w tekście
+
+extraction:
+  # llm = wartości wyciąga LLM (llm_calls w type.yaml), kod weryfikuje je w tekście i z kandydatami regex;
+  # regex_only = tryb awaryjny: pierwszy kandydat regex w sekcji pola (x-section).
+  mode: llm
+  parallel_calls: 3           # równoległe wywołania LLM jednego dokumentu
+
+llm:
+  enabled: auto               # auto = włączony, gdy w środowisku/.env jest skonfigurowany choć jeden dostawca
+  # Dostawcy (endpoint zgodny z OpenAI Chat Completions) w kolejności użycia. Wartości: nazwy zmiennych
+  # środowiskowych / .env (lista = pierwsza ustawiona). Dostawca bez ustawionych zmiennych jest pomijany.
+  # Gdy wywołanie do dostawcy się nie powiedzie (limit klucza, autoryzacja, błąd serwera, sieć — po
+  # ponowieniach), to samo zapytanie idzie do następnego; niedziałający dostawca jest pomijany przez `cooldown`.
+  providers:
+    - {name: fabryka,  api_base_env: [LLM_API_BASE, LLM_API_URL], api_key_env: LLM_API_KEY, model_env: LLM_MODEL}
+    - {name: cyfronet, api_base_env: CYFRO_LLM_API_URL, api_key_env: CYFRO_LLM_API_KEY, model_env: CYFRO_LLM_MODEL}
+  cooldown: 600               # s
+  temperature: 0
+  max_tokens: 1200            # ucięta odpowiedź jest naprawiana (pola decyzyjne stoją przed cytatami)
+  json_mode: true             # response_format=json_object (serwer bez wsparcia → automatycznie bez)
+  timeout: 60
+  retries: 3                  # 429/5xx/błąd sieci: ponowienia z odczekaniem 1, 2, 4 s
+  failover_retries: 1         # gdy jest kolejny dostawca: tyle ponowień, potem przełączenie
+  cache_dir: .cache/llm
+
+run:
+  # python -m odw2json run. Czas dokumentu to głównie oczekiwanie na LLM (sieć), więc procesów może być
+  # więcej niż rdzeni (VM oceny: 2 vCPU). 4 procesy × parallel_calls = do 12 równoległych zapytań LLM
+  # (tyle przeszło w ewaluacjach bez błędów 429).
+  workers: 4
+  # obsługiwane formaty: PDF i obrazy skanów (strona obrazu → OCR jak strona PDF bez warstwy tekstowej)
+  extensions: [.pdf, .png, .jpg, .jpeg, .tif, .tiff, .bmp]
+  other_files: empty          # pozostałe pliki: empty = zapisz {} (każdy plik wejściowy ma wynik); skip = pomiń
+
+output:
+  trace_dir: trace            # ślady decyzji (poza output/, który ocenia organizator)
+  on_error: skeleton          # skeleton = JSON typu z samymi null; empty = {}

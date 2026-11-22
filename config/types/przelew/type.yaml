@@ -1,0 +1,59 @@
+# Typ dokumentu: potwierdzenie przelewu. Opis kluczy: config/types/odwolanie/type.yaml.
+# Szablony bankowe są bardzo różne (na skanach rzadko „Potwierdzenie…”: „Przelew krajowy”, „PRZELEW ELIXIR”,
+# „Szczegóły zlecenia”) — dlatego wiele średnich sygnałów zamiast jednego nagłówka.
+
+name: przelew
+title: Potwierdzenie przelewu bankowego
+description: >
+  Potwierdzenie wykonania przelewu / transakcji bankowej (np. wpis od odwołania, opłata skarbowa od
+  pełnomocnictwa), wydruk z bankowości elektronicznej. Zawiera datę, kwotę, rachunki nadawcy i odbiorcy,
+  tytuł i numer transakcji.
+pages: 2
+
+classification:
+  method: hybrid
+  scope: {pages: 2}
+  accept: 8
+  reject: 4
+  margin: 4
+  max_pages: {limit: 3, penalty: 6}
+  signals:
+    - {id: potwierdzenie, weight: 4, pattern: '(?i)(potwierdzeni\w*|dowód)\s+(\w+\s+){0,2}?(przelewu|transakcji|operacji|zlecenia|wykonania|realizacji)'}
+    - {id: przelew,       weight: 2, pattern: '(?i)\bprzelew\w*'}
+    - {id: rachunek,      weight: 3, pattern: '(?i)\bz\s+rachunku\b|\bna\s+rachunek\b|rachun\w*\s+(zleceniodawcy|nadawcy|odbiorcy|beneficjenta|uznawany|obciąż\w*|płatnika)|numer\s+rachunku|konto\s+(nadawcy|odbiorcy)'}
+    - {id: iban,          weight: 4, pattern: '{{@iban}}'}
+    - {id: data_operacji, weight: 2, pattern: '(?i)data\s+(operacji|transakcji|realizacji|wykonania|księgowania|obciążenia|zlecenia)'}
+    - {id: kwota,         weight: 1, pattern: '(?i)\b(kwota|wartość)\b'}
+    - {id: kwota_waluta,  weight: 2, pattern: '(?i)\d[\d .]*[.,]\d{2}\s*(PLN|zł)\b|\b(PLN|zł)\s*\d[\d .]*[.,]\d{2}'}
+    - {id: strony,        weight: 2, pattern: '(?i)\b(zleceniodawc\w*|kontrahent\w*|beneficjent\w*|dane\s+(nadawcy|odbiorcy)|nadawca|odbiorca|płatnik)\b'}
+    - {id: tytul,         weight: 1, pattern: '(?i)\btytu[łl]\w*'}
+    - {id: bank,          weight: 1, pattern: '(?i)\bbank\w*'}
+  negative_signals:
+    - {id: odwolanie_naglowek,      weight: 8, scope: {pages: 1}, pattern: '(?m)^\W*{{spaced:ODWOŁANIE}}\b'}
+    - {id: pelnomocnictwo_naglowek, weight: 8, scope: {pages: 1}, pattern: '(?im)^\W*{{spaced:PEŁNOMOCNICTWO}}\W*$'}
+    - {id: odwolujacy,    weight: 4, pattern: '(?im)^\W*Odwołując\w*\s*:'}
+    - {id: mocodawca,     weight: 4, pattern: '(?i)\bmocodawc\w*'}
+    - {id: ogloszenie,    weight: 8, scope: {chars: 400}, pattern: '(?i)Ogłoszenie\s+(nr|o\s+zamówieniu)|See the notice on TED'}
+    # Wyciąg bankowy = wiele operacji za okres + saldo początkowe/końcowe (potwierdzenie dotyczy jednej transakcji).
+    - {id: wyciag,        weight: 12, pattern: '(?i)saldo\s+(początkowe|końcowe|otwarcia|zamknięcia)|(?m:^\W*wyciąg\s+(nr|bankowy|z\s+rachunku))|zestawienie\s+operacji'}
+    # Faktura: też ma rachunek, kwotę i termin — ale sprzedawca/nabywca i pozycje.
+    - {id: faktura,       weight: 10, pattern: '(?i)(?m:^\W*faktura(\s+vat)?\b)|\bnabywca\b|\bsprzedawca\b|termin\s+płatności'}
+  semantic:
+    requirements:
+      - id: operacja
+        essential: true
+        text: Dokument pochodzi z banku lub bankowości elektronicznej i potwierdza wykonanie (albo przyjęcie do realizacji) jednej konkretnej operacji przelewu.
+      - id: dane_przelewu
+        essential: true
+        text: Zawiera kwotę, datę operacji i rachunek odbiorcy lub nadawcy; zwykle także tytuł przelewu.
+    not_to_confuse_with:
+      - Faktury i rachunki do zapłaty (sprzedawca, nabywca, termin płatności).
+      - Wyciągi bankowe za okres — lista wielu operacji z saldem początkowym i końcowym.
+      - Pisma, które jedynie wspominają o uiszczeniu wpisu lub opłaty.
+
+llm_calls:
+  main:
+    prompt: main.md
+    context: {pages: 2, max_chars: 5000}
+    # tytuł przed numerem transakcji: numer referencyjny bywa ostatnią linią pola tytułu
+    field_order: [przelew_bankowy.tytul]

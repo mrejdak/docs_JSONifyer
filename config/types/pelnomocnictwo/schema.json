@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "pelnomocnictwo",
+  "description": "Pełnomocnictwo — mocodawcy (także kilku przy konsorcjum), osoby podpisujące i pełnomocnicy.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["mocodawca", "pelnomocnicy"],
+  "properties": {
+    "mocodawca": {
+      "type": "array",
+      "description": "Podmioty udzielające pełnomocnictwa. Może być więcej niż jeden (konsorcjum wspólnie).",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["data", "podpisujacy"],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["imie_nazwisko", "krs", "nazwa", "nip", "typ"],
+            "properties": {
+              "imie_nazwisko": {
+                "type": ["string", "null"],
+                "description": "Imię i nazwisko mocodawcy w mianowniku, jeśli jest osobą fizyczną (np. przedsiębiorca jednoosobowy). Dla osoby prawnej: null.",
+                "x-source": "normalized",
+                "x-normalize": ["strip_titles", "person_nominative", "collapse_ws"],
+                "x-llm-call": "main",
+                "x-match": {"kind": "fuzzy", "accept": 0.97, "snap": 0.85, "prefer": "llm"}
+              },
+              "krs": {
+                "type": ["string", "null"],
+                "description": "Numer KRS mocodawcy (10 cyfr), jeśli podany. Osoba fizyczna zwykle null.",
+                "x-source": "verbatim",
+                "x-normalize": ["digits"],
+                "x-validate": "^\\d{10}$",
+                "x-candidates": [{"label": "(?i)\\bKRS\\b", "value": "@krs", "window": 30, "priority": 1}],
+                "x-llm-call": "main",
+                "x-match": {"kind": "digits", "max_edits": 1, "prefer": "candidate"}
+              },
+              "nazwa": {
+                "type": ["string", "null"],
+                "description": "Pełna nazwa mocodawcy (firma) przepisana dokładnie, z formą prawną (np. 'Przedsiębiorstwo Robót Drogowych TRAKT sp. z o.o.', 'Nowak i Wspólnicy spółka jawna', 'Zakład Usług Komunalnych Anna Wiśniewska').",
+                "x-source": "verbatim",
+                "x-normalize": ["strip_quotes", "legal_form", "collapse_ws"],
+                "x-llm-call": "main",
+                "x-match": {"kind": "fuzzy", "accept": 0.97, "snap": 0.85, "prefer": "llm"}
+              },
+              "nip": {
+                "type": ["string", "null"],
+                "description": "NIP mocodawcy — 10 cyfr bez kresek i spacji.",
+                "x-source": "normalized",
+                "x-normalize": ["digits"],
+                "x-validate": "^\\d{10}$",
+                "x-candidates": [{"label": "(?i)\\bNIP\\b", "value": "@nip", "window": 30, "priority": 1}],
+                "x-llm-call": "main",
+                "x-match": {"kind": "digits", "max_edits": 1, "prefer": "candidate"}
+              },
+              "typ": {
+                "type": ["string", "null"],
+                "enum": ["osoba_prawna", "osoba_fizyczna", null],
+                "description": "Typ mocodawcy: 'osoba_prawna' (spółka, fundacja, podmiot z KRS lub formą prawną) albo 'osoba_fizyczna' (np. przedsiębiorca wpisany do CEIDG działający pod własnym imieniem i nazwiskiem).",
+                "x-source": "inferred",
+                "x-llm-call": "main"
+              }
+            }
+          },
+          "podpisujacy": {
+            "type": "array",
+            "description": "Osoby podpisujące pełnomocnictwo w imieniu mocodawcy (członkowie zarządu, prokurenci, wspólnicy).",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["imie_nazwisko"],
+              "properties": {
+                "imie_nazwisko": {
+                  "type": ["string", "null"],
+                  "description": "Imię i nazwisko osoby podpisującej w mianowniku, bez funkcji (Prezes Zarządu, Prokurent) i tytułów.",
+                  "x-source": "normalized",
+                  "x-normalize": ["strip_titles", "person_nominative", "collapse_ws"],
+                  "x-llm-call": "main",
+                  "x-match": {"kind": "fuzzy", "accept": 0.97, "snap": 0.85, "prefer": "llm"}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "pelnomocnicy": {
+      "type": "array",
+      "description": "Osoby otrzymujące pełnomocnictwo (pełnomocnicy).",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["imie_nazwisko", "pesel"],
+        "properties": {
+          "imie_nazwisko": {
+            "type": ["string", "null"],
+            "description": "Imię i nazwisko pełnomocnika w mianowniku, bez tytułów (adw., r. pr., radca prawny). Np. 'ustanawiam pełnomocnikiem r. pr. Marię Zielińską' → 'Maria Zielińska', 'adw. Tomasza Wójcika' → 'Tomasz Wójcik'.",
+            "x-source": "normalized",
+            "x-normalize": ["strip_titles", "person_nominative", "collapse_ws"],
+            "x-llm-call": "main",
+            "x-match": {"kind": "fuzzy", "accept": 0.97, "snap": 0.85, "prefer": "llm"}
+          },
+          "pesel": {
+            "type": ["string", "null"],
+            "description": "PESEL pełnomocnika (11 cyfr, jako tekst), jeśli podany; inaczej null.",
+            "x-source": "verbatim",
+            "x-normalize": ["digits"],
+            "x-validate": "^\\d{11}$",
+            "x-candidates": [{"label": "(?i)\\bPESEL\\b", "value": "@pesel", "window": 30, "priority": 1}],
+            "x-llm-call": "main",
+            "x-match": {"kind": "digits", "max_edits": 1, "prefer": "candidate"}
+          }
+        }
+      }
+    }
+  }
+}

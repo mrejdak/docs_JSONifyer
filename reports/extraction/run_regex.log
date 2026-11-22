@@ -1,0 +1,25 @@
+[eval] 210 dokumentów, LLM: wyłączony, tekst: auto, klasyfikacja: False
+[eval] 20/210 1s
+[eval] 40/210 1s
+[eval] 60/210 1s
+[eval] 80/210 1s
+[eval] 100/210 1s
+[eval] 120/210 1s
+[eval] 140/210 1s
+[eval] 160/210 1s
+[eval] 180/210 1s
+[eval] 200/210 1s
+# Ekstrakcja — F1 (tekst `auto`, LLM `wyłączony`, zestaw `all`, klasyfikacja z etykiety)
+
+Dokumentów: 210, czas: 1 s. Błędy wywołań LLM: 350.
+
+| miara | precision | recall | F1 | TP | FP | FN |
+|---|---|---|---|---|---|---|
+| **micro (null/null = TP)** | 0.9204 | 0.5761 | **0.7086** | 1526 | 132 | 1123 |
+| tylko wartości niepuste | 0.9022 | 0.5203 | 0.6600 | | | |
+
+## Per typ i zestaw
+
+| typ | zestaw | dok. | P | R | F1 |
+|---|---|---|---|---|---|
+... zapisano C:\Users\Work\Desktop\hackathony\hacknation\Odwolania2JSON\final_product\reports\extraction\summary_auto_regex.md

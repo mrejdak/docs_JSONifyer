@@ -1,0 +1,25 @@
+[eval] 210 dokumentów, LLM: bielik-11b-v3.1, tekst: auto, klasyfikacja: False
+[eval] 20/210 0s
+[eval] 40/210 1s
+[eval] 60/210 1s
+[eval] 80/210 1s
+[eval] 100/210 1s
+[eval] 120/210 1s
+[eval] 140/210 1s
+[eval] 160/210 1s
+[eval] 180/210 1s
+[eval] 200/210 2s
+# Ekstrakcja — F1 (tekst `auto`, LLM `bielik-11b-v3.1`, zestaw `all`, klasyfikacja z etykiety)
+
+Dokumentów: 210, czas: 2 s. Błędy wywołań LLM: 0.
+
+| miara | precision | recall | F1 | TP | FP | FN |
+|---|---|---|---|---|---|---|
+| **micro (null/null = TP)** | 0.9933 | 0.9904 | **0.9918** | 2676 | 18 | 26 |
+| tylko wartości niepuste | 0.9923 | 0.9889 | 0.9906 | | | |
+
+## Per typ i zestaw
+
+| typ | zestaw | dok. | P | R | F1 |
+|---|---|---|---|---|---|
+... zapisano C:\Users\Work\Desktop\hackathony\hacknation\Odwolania2JSON\final_product\reports\extraction\summary_auto.md

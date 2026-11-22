@@ -1,0 +1,26 @@
+[eval] 227 dokumentów, LLM: bielik-11b-v3.1, tekst: auto, klasyfikacja: True
+[eval] 20/227 1s
+[eval] 40/227 1s
+[eval] 60/227 1s
+[eval] 80/227 1s
+[eval] 100/227 1s
+[eval] 120/227 1s
+[eval] 140/227 2s
+[eval] 160/227 2s
+[eval] 180/227 3s
+[eval] 200/227 4s
+[eval] 220/227 7s
+# Ekstrakcja — F1 (tekst `auto`, LLM `bielik-11b-v3.1`, zestaw `all`, klasyfikacja tak)
+
+Dokumentów: 227, czas: 17 s. Błędy wywołań LLM: 0.
+
+| miara | precision | recall | F1 | TP | FP | FN |
+|---|---|---|---|---|---|---|
+| **micro (null/null = TP)** | 0.9915 | 0.9879 | **0.9897** | 2686 | 23 | 33 |
+| tylko wartości niepuste | 0.9902 | 0.9860 | 0.9881 | | | |
+
+## Per typ i zestaw
+
+| typ | zestaw | dok. | P | R | F1 |
+|---|---|---|---|---|---|
+... zapisano C:\Users\Work\Desktop\hackathony\hacknation\Odwolania2JSON\final_product\reports\extraction\summary_auto_e2e.md

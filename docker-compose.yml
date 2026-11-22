@@ -1,0 +1,12 @@
+# Odwołania2JSON — usługa jednorazowa (bez kontenera w tle), uruchamiana komendą z RUN.md:
+#     docker compose run --rm odw2json
+# Obraz = samo środowisko (Python, Tesseract, zależności); budowany raz przed oceną: docker compose build.
+# Katalog projektu (/opt/solution: kod, config, models/, .env, input/, output/) montowany jako /app,
+# więc wyniki trafiają bezpośrednio do /opt/solution/output, a klucze API są czytane z /opt/solution/.env.
+services:
+  odw2json:
+    build: .
+    volumes:
+      - ./:/app
+    working_dir: /app
+    command: ["python", "-m", "odw2json", "run", "--input", "input", "--output", "output"]

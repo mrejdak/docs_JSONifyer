@@ -1,0 +1,112 @@
+# Typ dokumentu: odwołanie do KIO.
+# Dodanie nowego typu = nowy katalog config/types/<typ>/ z type.yaml + schema.json (bez zmian w kodzie).
+#
+# classification:
+#   method: regex | semantic | hybrid
+#   scope: {pages: N} albo {chars: N} — domyślny zakres sygnałów (nadpisywany per sygnał)
+#   signals / negative_signals: {id, pattern, weight, scope?, required?, ocr_tolerant?}
+#     pattern: regex Pythona; makra {{spaced:SŁOWO}} (rozstrzelony druk), {{@nazwa}} (config/patterns.yaml);
+#     tolerancja OCR (domyślnie): litery z ogonkami dopuszczają wersję bez ogonka.
+#   accept / reject / margin: progi decyzji (docs/02_klasyfikacja.md §5)
+#   max_pages: {limit, penalty} — kara, gdy dokument ma więcej stron
+#   semantic: opis dla LLM, który decyduje o typie (prompt: config/prompts/klasyfikacja.md);
+#     regex daje dowody leksykalne, ochronę przed halucynacją i tryb awaryjny bez LLM
+
+name: odwolanie
+title: Odwołanie do Krajowej Izby Odwoławczej
+description: >
+  Pismo wykonawcy (Odwołującego) do Prezesa Krajowej Izby Odwoławczej, zaskarżające czynność lub
+  zaniechanie Zamawiającego w postępowaniu o udzielenie zamówienia publicznego. Zawiera oznaczenie
+  stron (Zamawiający, Odwołujący, pełnomocnik), oznaczenie postępowania, zarzuty i żądania.
+pages: 4
+
+classification:
+  method: hybrid
+  scope: {pages: 2}
+  accept: 8
+  reject: 4
+  margin: 4
+  signals:
+    - {id: naglowek,    weight: 6, scope: {pages: 2}, pattern: '(?m)^\W*{{spaced:ODWOŁANIE}}\b'}
+    # adresat: „Prezes Krajowej Izby Odwoławczej” albo sama „Krajowa Izba Odwoławcza” w bloku adresowym
+    - {id: adresat,     weight: 3, scope: {pages: 1}, pattern: '(?i)Prezes\w*\s+Krajowej\s+Izby\s+Odwoławczej|(?m:^\W*Krajowa\s+Izba\s+Odwoławcza\W*$)'}
+    - {id: odwolujacy,  weight: 3, pattern: '(?im)^\W*Odwołując\w*\s*:'}
+    - {id: zamawiajacy, weight: 1, pattern: '(?im)^\W*Zamawiając\w*\s*:'}
+    - {id: zarzut,      weight: 2, pattern: '(?i)\bzarzu(t|c)\w*'}
+    - {id: wnosze,      weight: 1, pattern: '(?i)\bwnosz[eę]\b|\bwnosi\s+o\b|\bwnoszę\s+odwołanie'}
+    - {id: czynnosc,    weight: 1, pattern: '(?i)\bczynnoś\w*|\bzaniechani\w*'}
+  negative_signals:
+    # Orzeczenia KIO / sądów (wyrok, postanowienie) — skład orzekający, sentencja.
+    - {id: orzeczenie,  weight: 8, scope: {pages: 1}, pattern: '(?m)^\W*(WYROK|POSTANOWIENIE|UCHWAŁA)\b'}
+    - {id: sklad_izby,  weight: 6, pattern: '(?i)Krajowa\s+Izba\s+Odwoławcza\s*[-–]?\s*w\s+składzie|(?m:^\W*Przewodnicząc\w*\s*:)'}
+    - {id: ogloszenie,  weight: 8, scope: {chars: 400}, pattern: '(?i)Ogłoszenie\s+(nr|o\s+zamówieniu)|See the notice on TED'}
+    - {id: pelnomocnictwo_naglowek, weight: 6, scope: {pages: 1}, pattern: '(?im)^\W*{{spaced:PEŁNOMOCNICTWO}}(\s+[^\W\d]+)?\W*$'}
+    # Inne pisma z akt sprawy odwoławczej (mają te same etykiety stron, KIO i zarzuty, ale nie są odwołaniem):
+    # odpowiedź na odwołanie, zgłoszenie przystąpienia (wzór UZP), pisma procesowe, cofnięcie, skarga na orzeczenie.
+    - {id: inne_pismo_kio, weight: 10, scope: {pages: 1}, pattern: '(?im)^\W*(odpowiedź\s+na\s+odwołanie|(zgłoszenie\s+)?przystąpieni[ea]\s+do\s+postępowania|pismo\s+procesowe|cofnięcie\s+odwołania|skarga(\s+na\s+(wyrok|postanowienie|orzeczenie))?\s*$|replika|stanowisko\s+(zamawiającego|odwołującego|przystępującego))'}
+    # Odwołanie to pierwsze pismo w sprawie — nie ma jeszcze sygnatury KIO; sygnatura w NAGŁÓWKU = pismo w toczącej się sprawie.
+    # (W treści odwołań „sygn. akt KIO …” występuje w cytatach orzeczeń — dlatego tylko początek dokumentu.)
+    - {id: sygnatura_w_naglowku, weight: 5, scope: {chars: 400}, pattern: '(?i)sygn\.?\s*(akt)?\s*:?\s*KIO\s*\d+\s*/\s*\d{2}'}
+    - {id: oddalenie,      weight: 6, pattern: '(?i)wnos\w*\s+o\s+oddalenie\s+odwołania'}
+    - {id: przystepujacy,  weight: 4, pattern: '(?im)^\W*Przystępując\w*\s*:'}
+  semantic:
+    # Wymagania (prompt klasyfikacji): LLM ocenia każde „tak”/„nie” dla dokumentu jako całości.
+    # essential: true = konieczne — typ wybrany przy niespełnionym wymaganiu koniecznym = odpowiedź niespójna.
+    requirements:
+      - id: autor_adresat
+        essential: true
+        text: Autorem jest wykonawca (Odwołujący) lub jego pełnomocnik, a pismo jest skierowane do Prezesa Krajowej Izby Odwoławczej (KIO).
+      - id: wnosi_odwolanie
+        essential: true
+        text: Ten dokument sam wnosi odwołanie — zaskarża czynność lub zaniechanie Zamawiającego, formułuje zarzuty i żądania (a nie tylko je przytacza, streszcza, cofa albo na nie odpowiada).
+      - id: postepowanie
+        essential: false
+        text: Oznacza strony (Odwołujący, Zamawiający) i postępowanie o udzielenie zamówienia (nazwa, numer, ogłoszenie BZP/TED).
+    not_to_confuse_with:
+      - Orzeczenia KIO (wyrok, postanowienie) — skład Izby, sentencja, uzasadnienie; w uzasadnieniu często streszczają lub cytują odwołanie.
+      - Inne pisma w toku sprawy, zwykle z sygnaturą akt KIO w nagłówku — odpowiedź na odwołanie, zgłoszenie przystąpienia, pismo procesowe, cofnięcie odwołania, pisma i zawiadomienia KIO, skarga do sądu na orzeczenie.
+      - Ogłoszenia i dokumentacja postępowania, materiały informacyjne.
+
+# Sekcje dokumentu — używane TYLKO w trybie awaryjnym bez LLM (kandydat regex z sekcji pola x-section).
+# Sekcja zaczyna się dopasowaniem `start`, kończy na `end` albo na początku innej sekcji.
+sections:
+  naglowek:        {start: '\A', end: '(?im)^\W*(Zamawiając|Odwołując)\w*', fallback: {chars: 600}}
+  # „Zamawiający:”, „Zamawiający (… nawias przez kilka linii …):”, sam nagłówek „Zamawiający” w linii
+  zamawiajacy:     {start: '(?im)^\W*Zamawiając\w*(\s*\([^)]*\))?\s*:|^\W*Zamawiając\w*\s*$'}
+  odwolujacy:      {start: '(?im)^\W*Odwołując\w*\s*:'}
+  inni_wykonawcy:  {start: '(?im)^\W*(Wykonawca\s+wybrany|Przystępując\w*|Uczestni\w+\s+postępowania)'}
+  adresat:         {start: '(?im)^\W*(Prezes\w*\s+)?Krajow\w+\s+Izb\w+\s+Odwoławcz\w+'}
+  dotyczy:         {start: '(?im)^\W*(dotyczy|Dotyczy)\s*:?', fallback: {pages: 1}}
+  tresc:           {start: '(?m)^\W*{{spaced:ODWOŁANIE}}\b', fallback: {pages: 3}}
+  pierwszy_zarzut: {start: '(?i)zarzut\w*\s+(nr\s+)?1\b|\bI\.\s+zarzut|^\W*1[.)]\s', end: '(?i)zarzut\w*\s+(nr\s+)?2\b|^\W*2[.)]\s', within: tresc}
+
+# Wywołania LLM (krok 4, docs/04 E3). Każde pole schema.json wskazuje wywołanie przez x-llm-call.
+#   prompt:  config/types/<typ>/prompts/<plik> — instrukcja wywołania, wstawiana do wspólnego szablonu
+#            config/prompts/ekstrakcja.md (zasady ogólne, pola, słowniki, format JSON)
+#   context: które strony dokumentu dostaje model: pages (pierwsze N stron), max_chars, tail_chars
+#            (koniec ostatniej strony — podpisy). Celowo bez sekcji wycinanych regexem: układ dokumentów
+#            bywa różny, a model ocenia kontekst sam.
+#   extra:   pola pomocnicze (klucz z „_”) wypełniane przed polami schematu — tok rozumowania; tylko w trace.
+#            Pole schematu z "x-evidence": "_klucz" musi pochodzić z tego cytatu (a cytat — z tekstu).
+#   field_order: ścieżki pól, które w formacie JSON dla LLM mają stać na początku (wynik — kolejność schematu).
+llm_calls:
+  strony:
+    prompt: strony.md
+    context: {pages: 2, max_chars: 7000, tail_chars: 800}
+  postepowanie:
+    prompt: postepowanie.md
+    context: {pages: 2, max_chars: 6000}
+    extra:
+      # specyfikacja organizatora: data i miejscowość „z nagłówka pierwszej strony, z linii typu 'X, dnia ...'”
+      _naglowek: dosłownie przepisana linia nagłówka pierwszej strony z miejscowością i datą sporządzenia pisma (np. „Kraków, 3 marca 2025 r.”) albo null, jeśli pismo takiej linii nie ma
+  zarzut:
+    prompt: zarzut.md
+    context: {pages: 3, max_chars: 9000}
+    extra:
+      _pierwsza_czynnosc: dosłowny krótki fragment opisujący pierwszą zaskarżoną czynność lub zaniechanie
+
+# Reguły spójności (krok 4, E7). [*] w warunku wiąże ten sam element listy w akcjach.
+consistency:
+  - {if: {path: 'Odwolujacy[*].przez-pelnomocnika', eq: 0}, then: {set_null: ['Odwolujacy[*].pelnomocnik.imie_nazwisko', 'Odwolujacy[*].pelnomocnik.nazwa', 'Odwolujacy[*].pelnomocnik.mail']}}
+  - {if: {path: 'Odwolujacy[*].pelnomocnik.imie_nazwisko', not_null: true}, then: {set: {'Odwolujacy[*].przez-pelnomocnika': 1}}}
+  - {if: {count: 'Zamawiajacy', eq: 1}, then: {set_null: ['Zamawiajacy[*].prowadzacy_postepowanie']}}

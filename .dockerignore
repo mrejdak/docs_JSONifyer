@@ -1,0 +1,3 @@
+# Obraz zawiera tylko środowisko — kod jest montowany (docker-compose.yml). Kontekst budowania: requirements.txt.
+*
+!requirements.txt

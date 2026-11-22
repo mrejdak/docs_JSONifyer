@@ -1,0 +1,288 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "odwolanie",
+  "description": "Odwołanie do Krajowej Izby Odwoławczej — dane pisma, stron i postępowania.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["OdwolanieKIO", "Odwolujacy", "Zamawiajacy", "ZamowieniePubliczne"],
+  "properties": {
+    "OdwolanieKIO": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["data", "czynnosc_dzien", "czynnosc_powod_id", "czynnosc_opis", "miejscowosc"],
+      "properties": {
+        "data": {
+          "type": ["string", "null"],
+          "format": "date",
+          "description": "Data pisma z nagłówka pierwszej strony, z linii z miejscowością i datą (np. 'Kraków, 3 marca 2025 r.', 'Bydgoszcz, dnia 28.11.2024 r.'), format YYYY-MM-DD. Brak takiej linii → null.",
+          "x-source": "normalized",
+          "x-normalize": ["date_iso"],
+          "x-validate": "^\\d{4}-\\d{2}-\\d{2}$",
+          "x-section": "naglowek",
+          "x-candidates": [
+            {"pattern": "(?m)^\\W*[A-ZŁŚŻŹĆ][\\w\\- ]{1,40}?,?\\s+(dnia\\s+)?(?P<v>{{@date}})", "priority": 1}
+          ],
+          "x-llm-call": "postepowanie",
+          "x-evidence": "_naglowek",
+          "x-match": {"kind": "exact"}
+        },
+        "czynnosc_dzien": {
+          "type": ["string", "null"],
+          "format": "date",
+          "description": "Data czynności (lub zaniechania) Zamawiającego zaskarżonej PIERWSZYM zarzutem albo zawiadomienia o niej, np. 'w dniu 14 lutego 2024 r. Zamawiający odrzucił ofertę Odwołującego', 'pismem z 02.09.2023 r. Zamawiający poinformował o wyborze oferty'; format YYYY-MM-DD. Brak wiarygodnej daty → null.",
+          "x-source": "inferred",
+          "x-normalize": ["date_iso"],
+          "x-validate": "^\\d{4}-\\d{2}-\\d{2}$",
+          "x-section": "tresc",
+          "x-candidates": [
+            {"pattern": "(?i)(w\\s+dniu|dnia|z\\s+dnia|dniem)\\s+(?P<v>{{@date}})", "priority": 1}
+          ],
+          "x-llm-call": "zarzut",
+          "x-match": {"kind": "exact"}
+        },
+        "czynnosc_powod_id": {
+          "type": ["integer", "null"],
+          "enum": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, null],
+          "description": "Identyfikator powodu odwołania 1–12 wg słownika czynnosc_powod, ustalany WYŁĄCZNIE na podstawie pierwszego zarzutu.",
+          "x-source": "inferred",
+          "x-normalize": ["int"],
+          "x-dictionary": "czynnosc_powod",
+          "x-llm-call": "zarzut"
+        },
+        "czynnosc_opis": {
+          "type": ["string", "null"],
+          "description": "Kanoniczny opis zaskarżonej czynności — zawsze ze słownika czynnosc_powod dla czynnosc_powod_id.",
+          "x-source": "derived",
+          "x-dictionary": "czynnosc_powod",
+          "x-derived-from": "OdwolanieKIO.czynnosc_powod_id"
+        },
+        "miejscowosc": {
+          "type": ["string", "null"],
+          "description": "Miejscowość z nagłówka pierwszej strony, z linii typu 'X, dnia ...' albo 'X DD.MM.RRRR' (np. 'Kraków, 3 marca 2025 r.' → 'Kraków').",
+          "x-source": "verbatim",
+          "x-normalize": ["collapse_ws"],
+          "x-section": "naglowek",
+          "x-candidates": [
+            {"pattern": "(?m)^\\W*(?P<v>[A-ZŁŚŻŹĆ][\\w\\-]+(?:[ \\-][A-ZŁŚŻŹĆ]?[\\w\\-]+){0,2}),?\\s+(dnia\\s+)?{{@date}}", "priority": 1}
+          ],
+          "x-llm-call": "postepowanie",
+          "x-evidence": "_naglowek",
+          "x-match": {"kind": "fuzzy", "accept": 0.97, "snap": 0.85, "prefer": "candidate"}
+        }
+      }
+    },
+    "Odwolujacy": {
+      "type": "array",
+      "description": "Odwołujący — wykonawca wnoszący odwołanie. Przy konsorcjum tylko Lider (jeden element).",
+      "minItems": 1,
+      "x-max-items": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["krs", "nazwa", "nip", "regon", "przez-pelnomocnika", "pelnomocnik"],
+        "properties": {
+          "krs": {
+            "type": ["string", "null"],
+            "description": "KRS Odwołującego lub Lidera konsorcjum (10 cyfr), jeśli występuje.",
+            "x-source": "verbatim",
+            "x-normalize": ["digits"],
+            "x-validate": "^\\d{10}$",
+            "x-section": "odwolujacy",
+            "x-candidates": [{"label": "(?i)\\bKRS\\b", "value": "@krs", "window": 30, "priority": 1}],
+            "x-llm-call": "strony",
+            "x-match": {"kind": "digits", "max_edits": 1, "prefer": "candidate"}
+          },
+          "nazwa": {
+            "type": ["string", "null"],
+            "description": "Pełna nazwa Odwołującego (sekcja 'Odwołujący'), przepisana dokładnie z formą prawną. Przy konsorcjum — nazwa Lidera.",
+            "x-source": "verbatim",
+            "x-normalize": ["strip_quotes", "legal_form", "collapse_ws"],
+            "x-section": "odwolujacy",
+            "x-llm-call": "strony",
+            "x-match": {"kind": "fuzzy", "accept": 0.97, "snap": 0.85, "prefer": "llm"}
+          },
+          "nip": {
+            "type": ["string", "null"],
+            "description": "NIP Odwołującego lub Lidera konsorcjum — 10 cyfr bez kresek, jeśli występuje.",
+            "x-source": "normalized",
+            "x-normalize": ["digits"],
+            "x-validate": "^\\d{10}$",
+            "x-section": "odwolujacy",
+            "x-candidates": [{"label": "(?i)\\bNIP\\b", "value": "@nip", "window": 30, "priority": 1}],
+            "x-llm-call": "strony",
+            "x-match": {"kind": "digits", "max_edits": 1, "prefer": "candidate"}
+          },
+          "regon": {
+            "type": ["string", "null"],
+            "description": "REGON Odwołującego lub Lidera konsorcjum (9 lub 14 cyfr), jeśli występuje.",
+            "x-source": "normalized",
+            "x-normalize": ["digits"],
+            "x-validate": "^\\d{9}(\\d{5})?$",
+            "x-section": "odwolujacy",
+            "x-candidates": [{"label": "(?i)\\bREGON\\b", "value": "@regon", "window": 30, "priority": 1}],
+            "x-llm-call": "strony",
+            "x-match": {"kind": "digits", "max_edits": 1, "prefer": "candidate"}
+          },
+          "przez-pelnomocnika": {
+            "type": ["integer", "null"],
+            "enum": [0, 1, null],
+            "description": "1 — Odwołujący działa przez pełnomocnika (np. 'reprezentowany przez', podpis pełnomocnika); 0 — nie.",
+            "x-source": "inferred",
+            "x-normalize": ["int"],
+            "x-llm-call": "strony"
+          },
+          "pelnomocnik": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["imie_nazwisko", "nazwa", "mail"],
+            "properties": {
+              "imie_nazwisko": {
+                "type": ["string", "null"],
+                "description": "Imię i nazwisko pełnomocnika Odwołującego w mianowniku, bez tytułów (adw., r. pr.). Przy kilku — pierwszy wymieniony.",
+                "x-source": "normalized",
+                "x-normalize": ["strip_titles", "person_nominative", "collapse_ws"],
+                "x-section": "odwolujacy",
+                "x-llm-call": "strony",
+                "x-match": {"kind": "fuzzy", "accept": 0.97, "snap": 0.85, "prefer": "llm"}
+              },
+              "nazwa": {
+                "type": ["string", "null"],
+                "description": "Nazwa podmiotu zatrudniającego pełnomocnika (np. kancelaria z adresu do korespondencji), bez adresu.",
+                "x-source": "verbatim",
+                "x-normalize": ["strip_quotes", "legal_form", "collapse_ws"],
+                "x-section": "odwolujacy",
+                "x-llm-call": "strony",
+                "x-match": {"kind": "fuzzy", "accept": 0.97, "snap": 0.85, "prefer": "llm"}
+              },
+              "mail": {
+                "type": ["string", "null"],
+                "description": "Adres e-mail kontaktowy pełnomocnika (nie Zamawiającego).",
+                "x-source": "verbatim",
+                "x-normalize": ["email"],
+                "x-validate": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$",
+                "x-section": "odwolujacy",
+                "x-candidates": [{"pattern": "(?P<v>{{@email_ocr}})", "priority": 1}],
+                "x-llm-call": "strony",
+                "x-match": {"kind": "fuzzy", "accept": 0.97, "snap": 0.9, "prefer": "candidate"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "Zamawiajacy": {
+      "type": "array",
+      "description": "Zamawiający (sekcja 'Zamawiający'); przy postępowaniu wspólnym kilku.",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["krs", "nazwa", "nip", "regon", "prowadzacy_postepowanie"],
+        "properties": {
+          "krs": {
+            "type": ["string", "null"],
+            "description": "KRS Zamawiającego (10 cyfr), jeśli jawnie podany przy Zamawiającym.",
+            "x-source": "verbatim",
+            "x-normalize": ["digits"],
+            "x-validate": "^\\d{10}$",
+            "x-section": "zamawiajacy",
+            "x-candidates": [{"label": "(?i)\\bKRS\\b", "value": "@krs", "window": 30, "priority": 1}],
+            "x-llm-call": "strony",
+            "x-match": {"kind": "digits", "max_edits": 1, "prefer": "candidate"}
+          },
+          "nazwa": {
+            "type": ["string", "null"],
+            "description": "Pełna nazwa Zamawiającego, przepisana dokładnie.",
+            "x-source": "verbatim",
+            "x-normalize": ["strip_quotes", "legal_form", "collapse_ws"],
+            "x-section": "zamawiajacy",
+            "x-llm-call": "strony",
+            "x-match": {"kind": "fuzzy", "accept": 0.97, "snap": 0.85, "prefer": "llm"}
+          },
+          "nip": {
+            "type": ["string", "null"],
+            "description": "NIP Zamawiającego — 10 cyfr bez kresek, jeśli jawnie podany.",
+            "x-source": "normalized",
+            "x-normalize": ["digits"],
+            "x-validate": "^\\d{10}$",
+            "x-section": "zamawiajacy",
+            "x-candidates": [{"label": "(?i)\\bNIP\\b", "value": "@nip", "window": 30, "priority": 1}],
+            "x-llm-call": "strony",
+            "x-match": {"kind": "digits", "max_edits": 1, "prefer": "candidate"}
+          },
+          "regon": {
+            "type": ["string", "null"],
+            "description": "REGON Zamawiającego (9 lub 14 cyfr), jeśli jawnie podany.",
+            "x-source": "normalized",
+            "x-normalize": ["digits"],
+            "x-validate": "^\\d{9}(\\d{5})?$",
+            "x-section": "zamawiajacy",
+            "x-candidates": [{"label": "(?i)\\bREGON\\b", "value": "@regon", "window": 30, "priority": 1}],
+            "x-llm-call": "strony",
+            "x-match": {"kind": "digits", "max_edits": 1, "prefer": "candidate"}
+          },
+          "prowadzacy_postepowanie": {
+            "type": ["integer", "null"],
+            "enum": [0, 1, null],
+            "description": "null — jeden Zamawiający; przy kilku: 1 dla oznaczonego jako prowadzący postępowanie / lider, 0 dla pozostałych.",
+            "x-source": "inferred",
+            "x-normalize": ["int"],
+            "x-llm-call": "strony"
+          }
+        }
+      }
+    },
+    "ZamowieniePubliczne": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["numer_bzp", "numer_postepowania", "numer_ted", "tytul"],
+      "properties": {
+        "numer_bzp": {
+          "type": ["string", "null"],
+          "description": "Numer ogłoszenia w BZP, format 'YYYY/BZP########' z opcjonalnym '/##' (korekta), BEZ spacji. Nie numer TED.",
+          "x-source": "normalized",
+          "x-normalize": ["bzp"],
+          "x-validate": "^\\d{4}/BZP\\d{8}(/\\d{2})?$",
+          "x-section": "dotyczy",
+          "x-candidates": [{"pattern": "(?P<v>{{@bzp}})", "priority": 1}],
+          "x-llm-call": "postepowanie",
+          "x-match": {"kind": "digits", "max_edits": 1, "prefer": "candidate"}
+        },
+        "numer_postepowania": {
+          "type": ["string", "null"],
+          "description": "Numer referencyjny / znak / numer postępowania po etykiecie, np. 'ZP.039.2025', 'V.ROZ.2710.125.2025', 'ZSCKR/822/2025', 'DZP/PN/045/2024', 'WZP-2711-3/22'.",
+          "x-source": "verbatim",
+          "x-normalize": ["strip", "strip_trailing_punct"],
+          "x-validate": "^\\S+$",
+          "x-section": "dotyczy",
+          "x-candidates": [
+            {"label": "(?i)(nr|numer)\\s+(referencyjn\\w*|postępowania|sprawy)(\\s+sprawy)?|znak\\s+(sprawy|postępowania)|oznaczenie\\s+sprawy", "value": "(?P<v>[A-Z0-9][A-Za-z0-9./\\-]*\\d[A-Za-z0-9./\\-]*)", "window": 40, "priority": 1}
+          ],
+          "x-llm-call": "postepowanie",
+          "x-match": {"kind": "fuzzy", "accept": 0.97, "snap": 0.85, "prefer": "candidate"}
+        },
+        "numer_ted": {
+          "type": ["string", "null"],
+          "description": "Numer ogłoszenia TED w formacie 'NNNNNN-YYYY' (zapis 'YYYY/S ###-NNNNNN' zamieniony na 'NNNNNN-YYYY').",
+          "x-source": "normalized",
+          "x-normalize": ["ted"],
+          "x-validate": "^\\d{6}-\\d{4}$",
+          "x-section": "dotyczy",
+          "x-candidates": [{"pattern": "(?P<v>{{@ted}})", "priority": 1}],
+          "x-llm-call": "postepowanie",
+          "x-match": {"kind": "digits", "max_edits": 1, "prefer": "candidate"}
+        },
+        "tytul": {
+          "type": ["string", "null"],
+          "description": "Tytuł (nazwa) zamówienia / postępowania, przepisany dokładnie, bez otaczających cudzysłowów.",
+          "x-source": "verbatim",
+          "x-normalize": ["join_lines", "strip_quotes", "collapse_ws"],
+          "x-section": "dotyczy",
+          "x-candidates": [{"pattern": "(?is)(pn\\.|pod\\s+nazwą|nazwa\\s+zamówienia\\s*:?)\\s*[\"„“”«](?P<v>[^\"„“”»]{5,400})[\"”“»]", "priority": 1}],
+          "x-llm-call": "postepowanie",
+          "x-match": {"kind": "fuzzy", "accept": 0.97, "snap": 0.85, "prefer": "llm"}
+        }
+      }
+    }
+  }
+}

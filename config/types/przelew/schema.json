@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "przelew",
+  "description": "Potwierdzenie przelewu bankowego — dane jednej transakcji.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["przelew_bankowy"],
+  "properties": {
+    "przelew_bankowy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["data_operacji", "kwota", "na_rachunek", "numer_transakcji", "tytul", "z_rachunku"],
+      "properties": {
+        "data_operacji": {
+          "type": ["string", "null"],
+          "format": "date",
+          "description": "Data wykonania / realizacji / księgowania operacji, format YYYY-MM-DD. Nie data wydruku, wygenerowania potwierdzenia ani pieczątki wpływu.",
+          "x-source": "normalized",
+          "x-normalize": ["date_iso"],
+          "x-validate": "^\\d{4}-\\d{2}-\\d{2}$",
+          "x-candidates": [
+            {"label": "(?i)data\\s+(operacji|transakcji|realizacji|wykonania|księgowania|obciążenia)|zlecona\\s+data\\s+wykonania", "value": "@date", "window": 60, "priority": 1},
+            {"label": "(?i)\\bdata\\b(?!\\s+(wydruku|wygenerowania|wystawienia))", "value": "@date", "window": 40, "priority": 3}
+          ],
+          "x-llm-call": "main",
+          "x-match": {"kind": "exact"}
+        },
+        "kwota": {
+          "type": ["number", "null"],
+          "description": "Kwota przelewu jako liczba (np. 20000.0, 1250.5), bez waluty i znaku minus.",
+          "x-source": "normalized",
+          "x-normalize": ["amount"],
+          "x-candidates": [
+            {"label": "(?i)\\b(kwota|wartość)(\\s+(przelewu|operacji|transakcji))?\\b", "value": "@amount", "window": 60, "priority": 1},
+            {"pattern": "(?i)(?P<v>\\d{1,3}(?:[ .]?\\d{3})*,\\d{2})\\s*(PLN|zł)", "priority": 2}
+          ],
+          "x-llm-call": "main",
+          "x-match": {"kind": "exact"}
+        },
+        "na_rachunek": {
+          "type": ["string", "null"],
+          "description": "Rachunek odbiorcy / beneficjenta / uznawany / kontrahenta. Bez spacji; prefiks kraju (np. PL) zachowany, jeśli występuje w dokumencie.",
+          "x-source": "normalized",
+          "x-normalize": ["account"],
+          "x-validate": "^([A-Z]{2})?\\d{26}$",
+          "x-candidates": [
+            {"label": "(?i)rachun\\w*\\s+(odbiorcy|beneficjenta|uznawany|uznany|kontrahenta)|\\bna\\s+rachunek|konto\\s+odbiorcy", "value": "@iban", "window": 120, "priority": 1}
+          ],
+          "x-llm-call": "main",
+          "x-match": {"kind": "digits", "max_edits": 1, "prefer": "candidate"}
+        },
+        "numer_transakcji": {
+          "type": ["string", "null"],
+          "description": "Numer referencyjny / identyfikator transakcji nadany przez bank, przepisany dokładnie (np. 'PK2403151234567', '20240315/3/1234567', 'TX-98321-AB7').",
+          "x-source": "verbatim",
+          "x-normalize": ["strip"],
+          "x-validate": "^\\S+$",
+          "x-candidates": [
+            {"label": "(?i)(numer|nr\\.?)\\s+(referencyjny|transakcji|operacji|ref\\.?)(\\s+transakcji)?|id\\s+transakcji|referencje", "value": "(?P<v>[A-Z0-9][A-Z0-9/\\-]{5,})", "window": 60, "priority": 1}
+          ],
+          "x-llm-call": "main",
+          "x-match": {"kind": "fuzzy", "accept": 0.97, "snap": 0.85, "prefer": "candidate"}
+        },
+        "tytul": {
+          "type": ["string", "null"],
+          "description": "Tytuł przelewu przepisany dokładnie jak w dokumencie (łamania linii zastąpione spacją).",
+          "x-source": "verbatim",
+          "x-normalize": ["join_lines", "collapse_ws"],
+          "x-candidates": [
+            {"label": "(?i)\\btytu[łl](em|\\s+przelewu)?\\b|szczegóły\\s+płatności|\\bopis\\b", "value": "(?P<v>[^\\n]+(?:\\n[^\\n:]{3,})?)", "window": 5, "priority": 1}
+          ],
+          "x-llm-call": "main",
+          "x-match": {"kind": "fuzzy", "accept": 0.97, "snap": 0.85, "prefer": "llm"}
+        },
+        "z_rachunku": {
+          "type": ["string", "null"],
+          "description": "Rachunek nadawcy / zleceniodawcy / obciążany / płatnika. Bez spacji; prefiks kraju (np. PL) zachowany, jeśli występuje w dokumencie.",
+          "x-source": "normalized",
+          "x-normalize": ["account"],
+          "x-validate": "^([A-Z]{2})?\\d{26}$",
+          "x-candidates": [
+            {"label": "(?i)rachun\\w*\\s+(zleceniodawcy|nadawcy|obciążany|obciążony|płatnika)|\\bz\\s+rachunku|konto\\s+nadawcy", "value": "@iban", "window": 120, "priority": 1}
+          ],
+          "x-llm-call": "main",
+          "x-match": {"kind": "digits", "max_edits": 1, "prefer": "candidate"}
+        }
+      }
+    }
+  }
+}

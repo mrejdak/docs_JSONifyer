@@ -1,0 +1,12 @@
+{
+  "name": "formy_prawne",
+  "description": "Formy prawne: (1) korekta typowych błędów OCR w nazwach (normalizator legal_form), (2) sygnał typu mocodawcy (osoba prawna).",
+  "ocr_fixes": [
+    {"pattern": "(?i)\\b(sp\\.?\\s*z\\s*)[0oO]\\.\\s?[0oO]\\.?(?=$|[\\s,;)])", "replace": "\\1o.o."},
+    {"pattern": "(?i)\\bz\\s+[0oO]\\.[0oO]\\.(?=$|[\\s,;)])", "replace": "z o.o."}
+  ],
+  "legal_person_markers": [
+    "sp. z o.o.", "spółka z ograniczoną odpowiedzialnością", "S.A.", "spółka akcyjna", "sp. k.", "spółka komandytowa",
+    "sp. j.", "spółka jawna", "sp. p.", "spółka partnerska", "S.K.A.", "fundacja", "stowarzyszenie", "spółdzielnia"
+  ]
+}

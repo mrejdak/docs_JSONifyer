@@ -1,0 +1,18 @@
+{
+  "name": "czynnosc_powod",
+  "description": "Powód odwołania (zaskarżona czynność) — wg hacknation-2026/oczekiwane-json/czynnosc_powod_id_dict.md. czynnosc_opis = entries[id].opis (zawsze ze słownika).",
+  "entries": {
+    "1":  {"opis": "Decyzja o odrzuceniu oferty",                       "hints": ["odrzucenie oferty Odwołującego", "art. 226 Pzp"]},
+    "2":  {"opis": "Ogłoszenie wyboru oferty",                          "hints": ["wybór oferty najkorzystniejszej (innego wykonawcy)", "zawiadomienie o wyborze"]},
+    "3":  {"opis": "Decyzja o wykluczeniu wykonawcy",                   "hints": ["wykluczenie Odwołującego z postępowania", "art. 108 / art. 109 Pzp"]},
+    "4":  {"opis": "Publikacja specyfikacji warunków zamówienia (SWZ)", "hints": ["postanowienia SWZ / ogłoszenia opublikowane w dniu…", "warunki udziału, kryteria w SWZ"]},
+    "5":  {"opis": "Modyfikacja treści SWZ",                            "hints": ["zmiana / modyfikacja treści SWZ", "art. 137 Pzp"]},
+    "6":  {"opis": "Odpowiedzi/wyjaśnienia do SWZ",                     "hints": ["wyjaśnienia treści SWZ", "odpowiedzi na pytania wykonawców", "art. 135 Pzp"]},
+    "7":  {"opis": "Zaniechanie odrzucenia oferty",                     "hints": ["zaniechanie odrzucenia oferty innego wykonawcy"]},
+    "8":  {"opis": "Zaniechanie wykluczenia wykonawcy",                 "hints": ["zaniechanie wykluczenia innego wykonawcy"]},
+    "9":  {"opis": "Decyzja o unieważnieniu postępowania",              "hints": ["unieważnienie postępowania", "art. 255 Pzp"]},
+    "10": {"opis": "Zaniechanie unieważnienia postępowania",            "hints": ["zaniechanie unieważnienia postępowania"]},
+    "11": {"opis": "Opis przedmiotu zamówienia (OPZ)",                  "hints": ["opis przedmiotu zamówienia", "OPZ", "parametry techniczne przedmiotu"]},
+    "12": {"opis": "Projektowane postanowienia umowy",                  "hints": ["projektowane postanowienia umowy", "PPU", "wzór umowy, kary umowne"]}
+  }
+}

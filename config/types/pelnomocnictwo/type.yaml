@@ -1,0 +1,57 @@
+# Typ dokumentu: pełnomocnictwo. Opis kluczy: config/types/odwolanie/type.yaml.
+
+name: pelnomocnictwo
+title: Pełnomocnictwo
+description: >
+  Dokument, w którym mocodawca (wykonawca: osoba prawna lub fizyczna, także konsorcjum) udziela
+  pełnomocnictwa wskazanym osobom (radcom prawnym, adwokatom, pracownikom) do reprezentowania go
+  w postępowaniu o udzielenie zamówienia publicznego lub w postępowaniu odwoławczym przed KIO. Zawiera dane mocodawcy, pełnomocników i podpisy.
+pages: 2
+
+classification:
+  method: hybrid
+  scope: {pages: 2}
+  accept: 8
+  reject: 4
+  margin: 4
+  signals:
+    # nagłówek: „PEŁNOMOCNICTWO”, „Pełnomocnictwo”, „PEŁNOMOCNICTWO PROCESOWE / SZCZEGÓLNE / …”
+    - {id: naglowek,   weight: 6, scope: {pages: 1}, pattern: '(?im)^\W*{{spaced:PEŁNOMOCNICTWO}}(\s+[^\W\d]+)?\W*$'}
+    - {id: mocodawca,  weight: 3, pattern: '(?i)\bmocodawc\w*'}
+    # „udzielam pełnomocnictwa / ustanawiam pełnomocnikiem / upoważniam adw. …” — rozstrzygające dla tego typu
+    - {id: udzielam,   weight: 5, pattern: '(?i)(ustanawia\w*|udziela\w*|udzielił\w*|upoważnia\w*)\s+(\w+\.?\s+){0,3}?(pełnomocnik\w*|pełnomocnictw\w*|adw\.|r\.\s?pr\.|radc\w*|adwokat\w*)'}
+    - {id: pelnomocnicy, weight: 2, pattern: '(?im)^\W*Pełnomocni(cy|k)\b'}
+    - {id: kontekst_kio, weight: 1, pattern: '(?i)przed\s+Krajową\s+Izbą\s+Odwoławczą|postępowani\w+\s+odwoławcz\w+'}
+    - {id: przyjmuje,  weight: 2, pattern: '(?i)pełnomocnictwo\s+przyjmuj'}
+    - {id: umocowanie, weight: 2, pattern: '(?i)\bumocowan\w*|\bdo\s+(reprezentowania|zastępowania)\b'}
+  negative_signals:
+    - {id: odwolanie_naglowek, weight: 6, scope: {pages: 1}, pattern: '(?m)^\W*{{spaced:ODWOŁANIE}}\b'}
+    - {id: odwolujacy,  weight: 3, pattern: '(?im)^\W*Odwołując\w*\s*:'}
+    - {id: orzeczenie,  weight: 8, scope: {pages: 1}, pattern: '(?m)^\W*(WYROK|POSTANOWIENIE|UCHWAŁA)\b'}
+    # Nagłówek potwierdzenia bankowego na początku linii (samo „przelew/rachunek” w treści jest dopuszczalne:
+    # pełnomocnictwo może wspominać uiszczenie opłaty skarbowej przelewem).
+    - {id: bank,        weight: 4, scope: {pages: 1}, pattern: '(?im)^\W*(potwierdzeni\w*|dowód)\s+(\w+\s+){0,2}?(przelewu|transakcji)'}
+    - {id: inne_pismo_kio, weight: 8, scope: {pages: 1}, pattern: '(?im)^\W*(odpowiedź\s+na\s+odwołanie|(zgłoszenie\s+)?przystąpieni[ea]\s+do\s+postępowania|pismo\s+procesowe|skarga(\s+na\s+(wyrok|postanowienie|orzeczenie))?\s*$)'}
+  semantic:
+    requirements:
+      - id: udziela
+        essential: true
+        text: Mocodawca w tym dokumencie udziela pełnomocnictwa, ustanawia pełnomocnika lub upoważnia wskazane osoby do działania w swoim imieniu.
+      - id: pelnomocnik_zakres
+        essential: true
+        text: Wskazuje, kto jest pełnomocnikiem, i określa zakres umocowania (np. reprezentowanie w postępowaniu o udzielenie zamówienia lub w postępowaniu odwoławczym przed KIO).
+      - id: podpis
+        essential: false
+        text: Jest podpisany przez mocodawcę lub osoby uprawnione do jego reprezentacji; może mieć postać tabeli albo zwykłego akapitu.
+    not_to_confuse_with:
+      - Odwołanie lub inne pismo, w którym jedynie wskazano pełnomocnika albo wymieniono pełnomocnictwo jako załącznik.
+      - Odpis z KRS/CEIDG opisujący sposób reprezentacji spółki (to nie jest udzielenie pełnomocnictwa).
+      - Potwierdzenie zapłaty opłaty skarbowej od pełnomocnictwa (to potwierdzenie przelewu).
+
+llm_calls:
+  main:
+    prompt: main.md
+    context: {pages: 2, max_chars: 8000}
+
+consistency:
+  - {if: {path: 'mocodawca[*].data.typ', eq: 'osoba_prawna'}, then: {set_null: ['mocodawca[*].data.imie_nazwisko']}}

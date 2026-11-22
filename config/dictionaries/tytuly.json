@@ -1,0 +1,15 @@
+{
+  "name": "tytuly",
+  "description": "Tytuły zawodowe/naukowe i funkcje usuwane z wartości imie_nazwisko (normalizator strip_titles). Porównanie bez wielkości liter; dłuższe frazy najpierw.",
+  "titles": [
+    "radca prawny", "radcy prawnego", "radca", "r. pr.", "r.pr.", "rpr.",
+    "adwokat", "adwokata", "adw.", "mec.", "mecenas",
+    "aplikant radcowski", "aplikant adwokacki", "apl. radc.", "apl. adw.",
+    "prof.", "dr hab.", "dr", "mgr inż.", "mgr", "inż.",
+    "pan", "pani", "p."
+  ],
+  "functions": [
+    "Prezes Zarządu", "Wiceprezes Zarządu", "Członek Zarządu", "Prokurent", "Prokurent samoistny",
+    "Wspólnik", "Wspólnik zarządzający", "Komplementariusz", "Dyrektor", "Pełnomocnik", "Właściciel"
+  ]
+}
