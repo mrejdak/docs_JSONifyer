@@ -31,6 +31,7 @@ def main(argv=None) -> int:
     ap.add_argument("--all", action="store_true")
     ap.add_argument("--subset", default=DEFAULT, help="regex na doc_id")
     ap.add_argument("--out", default="selftest")
+    ap.add_argument("--flat", action="store_true", help="wszystkie pliki bezpośrednio w input/ (nazwa: <sprawa>__<plik>)")
     a = ap.parse_args(argv)
     root = APP_ROOT / a.out
     shutil.rmtree(root, ignore_errors=True)
@@ -40,7 +41,8 @@ def main(argv=None) -> int:
             continue
         pdf = Path(d.pdf)
         case = d.doc_id.split("__")[0] if not d.doc_id.startswith(("skany__", "szablon__")) else "__".join(d.doc_id.split("__")[:-1])
-        dst = root / "input" / case / pdf.name
+        rel = Path(f"{case}__{pdf.name}") if a.flat else Path(case) / pdf.name
+        dst = root / "input" / rel
         dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(pdf, dst)
         if d.gt:
@@ -50,7 +52,7 @@ def main(argv=None) -> int:
         else:
             exp = None  # dokument bez GT (np. prawdziwy skan z szablonu) — tylko w input/
         if exp is not None:
-            e = root / "expected" / case / pdf.with_suffix(".json").name
+            e = root / "expected" / rel.with_suffix(".json")
             e.parent.mkdir(parents=True, exist_ok=True)
             e.write_text(json.dumps(exp, ensure_ascii=False, indent=2), encoding="utf-8")
         n += 1

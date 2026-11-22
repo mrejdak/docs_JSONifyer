@@ -1,12 +1,23 @@
-# Odwołania2JSON — usługa jednorazowa (bez kontenera w tle), uruchamiana komendą z RUN.md:
-#     docker compose run --rm odw2json
-# Obraz = samo środowisko (Python, Tesseract, zależności); budowany raz przed oceną: docker compose build.
-# Katalog projektu (/opt/solution: kod, config, models/, .env, input/, output/) montowany jako /app,
-# więc wyniki trafiają bezpośrednio do /opt/solution/output, a klucze API są czytane z /opt/solution/.env.
+# Odwołania2JSON — usługa jednorazowa (bez kontenera w tle). Komenda z /opt/solution/RUN.md:
+#     docker compose -f /opt/solution/docs_JSONifyer/docker-compose.yml run --rm odw2json
+#
+# Układ na VM oceny: repozytorium w /opt/solution/docs_JSONifyer; wejście, wyjście i klucze API obok niego
+# w /opt/solution: input/, output/, .env (ścieżki względem tego pliku; inne: zmienne ODW_INPUT, ODW_OUTPUT,
+# ODW_ENV — np. lokalnie ODW_INPUT=./input ODW_OUTPUT=./output).
+# Obraz = samo środowisko (Python 3.13, Tesseract 5, zależności), budowany raz przed oceną (… build).
+# Kod, config i model OCR są montowane z repozytorium — zmiana kodu nie wymaga przebudowy obrazu.
+name: odw2json
 services:
   odw2json:
     build: .
     volumes:
       - ./:/app
+      - ${ODW_INPUT:-../input}:/app/input:ro
+      - ${ODW_OUTPUT:-../output}:/app/output
+    env_file:
+      - path: .env
+        required: false
+      - path: ${ODW_ENV:-../.env}   # klucze API (wymóg organizatora: /opt/solution/.env); ma pierwszeństwo
+        required: false
     working_dir: /app
     command: ["python", "-m", "odw2json", "run", "--input", "input", "--output", "output"]
