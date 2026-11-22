@@ -1,6 +1,6 @@
 # Ekstrakcja — F1 (tekst `auto`, LLM `bielik-11b-v3.1`, zestaw `all`, klasyfikacja tak)
 
-Dokumentów: 227, czas: 17 s. Błędy wywołań LLM: 0.
+Dokumentów: 227, czas: 3 s. Błędy wywołań LLM: 0.
 
 | miara | precision | recall | F1 | TP | FP | FN |
 |---|---|---|---|---|---|---|

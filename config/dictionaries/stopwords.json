@@ -1,0 +1,13 @@
+{
+  "name": "stopwords",
+  "description": "Częste słowa funkcyjne i skróty (pl + en) — miara „czy to tekst w języku naturalnym” dla oceny warstwy tekstowej PDF i OCR (odw2json/text/quality.py). Porównanie bez wielkości liter i bez polskich znaków. Losowe litery z błędnego kodowania fontów prawie ich nie zawierają; tekst pisma — kilkanaście–kilkadziesiąt procent słów.",
+  "words": [
+    "i", "w", "z", "na", "do", "nie", "się", "o", "że", "od", "oraz", "dla", "przez", "jest", "to", "a", "lub",
+    "po", "za", "ze", "we", "jak", "co", "tym", "tego", "który", "która", "które", "których", "są", "być", "czy",
+    "ich", "jego", "jej", "pod", "przy", "bez", "także", "również", "tak", "albo", "ani", "ale", "gdy", "jako",
+    "już", "może", "wraz", "wobec", "według", "dnia", "dniu", "roku", "r", "nr", "art", "ust", "pkt", "lit",
+    "poz", "ul", "sp", "oo", "zł", "pln", "tj", "m.in", "itp", "tel",
+    "the", "of", "and", "to", "in", "for", "on", "with", "by", "is", "are", "be", "this", "that", "as", "at",
+    "from", "or", "an", "not", "no"
+  ]
+}

@@ -7,6 +7,15 @@
 text:
   min_text_chars: 50          # strona z mniejszą liczbą znaków w warstwie tekstowej → OCR
   max_pages: 6                # górny limit stron czytanych z dokumentu (typy mogą żądać mniej)
+  # Weryfikacja warstwy tekstowej (odw2json/text/quality.py): strona w większości pokryta obrazem (skan
+  # z dodanym tekstem — stopka podpisu, numeracja; warstwa OCR skanera) albo z podejrzanym tekstem
+  # (znaki nieprawidłowe — font bez mapy znaków; losowe litery — błędne kodowanie) → OCR strony i wybór
+  # lepszego wyniku. W danych treningowych (399 stron z tekstem) nie włącza się ani razu.
+  verify_text_layer: true
+  image_coverage_ocr: 0.3     # część strony pokryta obrazami, od której porównujemy z OCR (logo, pieczątka: < 0,1)
+  suspicious_invalid_ratio: 0.05   # udział znaków nieprawidłowych (zastępczy, prywatny Unicode, spoza alfabetu łacińskiego)
+  suspicious_stop_ratio: 0.03      # udział słów funkcyjnych (pl/en) przy ≥ 20 słowach; dane: min 0,059, mediana 0,27
+  ocr_better_ratio: 1.2       # OCR wybierany, gdy jego wynik jakości > 1,2 × wynik warstwy tekstowej (remis → warstwa)
 
 ocr:
   engine: tesseract           # bezpośrednie wywołanie binarki (bez OCRmyPDF — patrz wnioski)
